@@ -1,10 +1,43 @@
-/*! Smartable
- * ©2015 TORan
- */
-
 var Smartable = {
     create: function (id, params) {
         var instance = {
+            TYPE_FUNCTION: 'function',
+            TYPE_UNDEFINED: 'undefined',
+
+            ATTR_PAGE: 'data-smartable-page',
+            ATTR_SORT: 'data-smartable-sort',
+            ATTR_SORT_VALUE: 'data-smartable-sort-value',
+            ATTR_FILTERED: 'data-smartable-filtered',
+            ATTR_POSITION: 'data-smartable-position',
+
+            CLASS_BASE: 'b-smartable',
+            CLASS_SORT: 'b-smartable__sort',
+            CLASS_SORT_DESC: 'b-smartable__sort_desc',
+            CLASS_SORT_ASC: 'b-smartable__sort_asc',
+            CLASS_TABLE: 'b-smartable__table',
+            CLASS_EMPTY: '',
+            CLASS_SEARCH: 'b-smartable__search',
+            CLASS_INPUT: 'b-smartable__input',
+            CLASS_SHOWING: 'b-smartable__showing',
+            CLASS_PAGER: 'b-smartable__pager',
+
+            HTML_HEAD: 'thead',
+            HTML_BODY: 'tbody',
+            HTML_BLOCK: 'div',
+            HTML_ROW: 'tr',
+            HTML_CELL: 'td',
+            HTML_INPUT: 'input',
+            HTML_HEADER_CELL: 'th',
+
+            NODE_TEXT: '#text',
+            NODE_TYPE_TEXT: 'text',
+
+            PROP_SHOW: '',
+            PROP_HIDE: 'none',
+
+            FILTERED_TRUE: 'yes',
+            FILTERED_FALSE: 'no',
+
             id: '',
 
             items: 0,
@@ -12,6 +45,7 @@ var Smartable = {
             pages: 0,
             page: 1,
             sort: {column: 0, desc: false},
+            sortAttribute: '',
 
             filter: null,
             search: '',
@@ -31,6 +65,24 @@ var Smartable = {
                 pager: null,
                 columns: [],
                 rows: []
+            },
+
+            /**
+             *
+             * @param func
+             * @returns {boolean}
+             */
+            isFunction: function (func) {
+                return typeof(func) == this.TYPE_FUNCTION;
+            },
+
+            /**
+             *
+             * @param data
+             * @returns {boolean}
+             */
+            isUndefined: function (data) {
+                return typeof(data) == this.TYPE_UNDEFINED;
             },
 
             /**
@@ -59,12 +111,16 @@ var Smartable = {
              * @returns {boolean}
              */
             initParams: function (params) {
-                if (typeof(params) == 'undefined') {
+                if (this.isUndefined(params)) {
                     return false;
                 }
 
-                if (typeof(params.limit) != 'undefined' && !isNaN(parseInt(params.limit))) {
+                if (!this.isUndefined(params.limit) && !isNaN(parseInt(params.limit))) {
                     this.limit = params.limit;
+                }
+
+                if (!this.isUndefined(params.sortAttribute)) {
+                    this.sortAttribute = params.sortAttribute;
                 }
 
                 return true;
@@ -79,8 +135,8 @@ var Smartable = {
 
                 if (this.html.table == null) {
                     return false;
-                } else if (this.html.table.className.indexOf('b-smartable__table') == -1) {
-                    this.html.table.className += ' b-smartable__table';
+                } else if (this.html.table.className.indexOf(this.CLASS_TABLE) == -1) {
+                    this.html.table.className += ' ' + this.CLASS_TABLE;
                 }
 
                 if (!this.initColumns() || !this.initRows()) {
@@ -95,17 +151,17 @@ var Smartable = {
              * @returns {boolean}
              */
             initColumns: function () {
-                var head = this.searchHtmlElements(this.html.table, 'thead');
+                var head = this.searchHtmlElements(this.html.table, this.HTML_HEAD);
 
-                if (typeof(head) != 'undefined' && typeof(head[0]) != 'undefined') {
+                if (!this.isUndefined(head) && !this.isUndefined(head[0])) {
                     this.html.tableHead = head[0];
 
-                    var th = this.searchHtmlElements(this.html.tableHead, 'th');
+                    var th = this.searchHtmlElements(this.html.tableHead, this.HTML_HEADER_CELL);
 
                     for (var i in th) {
                         if (th.hasOwnProperty(i)) {
-                            th[i].setAttribute('data-sort', i);
-                            th[i].className = 'b-smartable__sort';
+                            th[i].setAttribute(this.ATTR_SORT, i);
+                            th[i].className = this.CLASS_SORT;
 
                             this.html.columns.push(th[i]);
                         }
@@ -122,21 +178,21 @@ var Smartable = {
              * @returns {boolean}
              */
             initRows: function () {
-                var body = this.searchHtmlElements(this.html.table, 'tbody');
+                var body = this.searchHtmlElements(this.html.table, this.HTML_BODY);
 
-                if (typeof(body) != 'undefined' && typeof(body[0]) != 'undefined') {
+                if (!this.isUndefined(body) && !this.isUndefined(body[0])) {
                     this.html.tableBody = body[0];
 
-                    var tr = this.searchHtmlElements(this.html.tableBody, 'tr');
+                    var rows = this.searchHtmlElements(this.html.tableBody, this.HTML_ROW);
 
-                    for (var i in tr) {
-                        if (tr.hasOwnProperty(i)) {
-                            tr[i].setAttribute('data-pos', i);
-                            tr[i].setAttribute('data-filtered', 'no');
+                    for (var i in rows) {
+                        if (rows.hasOwnProperty(i)) {
+                            rows[i].setAttribute(this.ATTR_POSITION, i);
+                            rows[i].setAttribute(this.ATTR_FILTERED, this.FILTERED_FALSE);
 
-                            tr[i].cells = this.searchHtmlElements(this.html.tableBody, 'td');
+                            rows[i].cells = this.searchHtmlElements(rows, this.HTML_CELL);
 
-                            this.html.rows.push(tr[i]);
+                            this.html.rows.push(rows[i]);
                         }
                     }
 
@@ -156,7 +212,9 @@ var Smartable = {
                 }
 
                 for (var j in this.html.rows) {
-                    this.html.tableBody.appendChild(this.html.rows[j]);
+                    if(this.html.rows.hasOwnProperty(j)) {
+                        this.html.tableBody.appendChild(this.html.rows[j]);
+                    }
                 }
 
                 return true;
@@ -172,12 +230,10 @@ var Smartable = {
                     var e = event || window.event,
                         t = e.target || e.srcElement;
 
-                    if (typeof(t) != 'undefined' && typeof(t.getAttribute) != 'undefined') {
-                        if (t.getAttribute('data-page') != null) {
-                            self.toPage(t.getAttribute('data-page'));
-                        } else if (t.getAttribute('data-sort') != null) {
-                            self.setSort(t.getAttribute('data-sort'));
-                        }
+                    if (self.getHtmlAttribute(t, self.ATTR_PAGE) != null) {
+                        self.toPage(self.getHtmlAttribute(t, self.ATTR_PAGE));
+                    } else if (self.getHtmlAttribute(t, self.ATTR_SORT) != null) {
+                        self.setSort(self.getHtmlAttribute(t, self.ATTR_SORT));
                     }
                 };
 
@@ -199,11 +255,11 @@ var Smartable = {
             createHtmlElement: function (tag, className, attributes) {
                 var domElement = document.createElement(tag);
 
-                if (typeof(className) != 'undefined') {
-                    domElement.className = 'b-smartable' + (className != '' ? '__' : '') + className;
+                if (!this.isUndefined(className)) {
+                    domElement.className = className;
                 }
 
-                if (typeof(attributes) != 'undefined') {
+                if (!this.isUndefined(attributes)) {
                     for (var i in attributes) {
                         if (attributes.hasOwnProperty(i)) {
                             domElement.setAttribute(i, attributes[i]);
@@ -216,15 +272,30 @@ var Smartable = {
 
             /**
              *
-             * @param parent
+             * @param node
+             * @param attribute
+             * @returns {String|null}
+             */
+            getHtmlAttribute: function (node, attribute) {
+                if (!this.isUndefined(node) && !this.isUndefined(node.getAttribute)) {
+                    return node.getAttribute(attribute);
+                }
+
+                return null;
+            },
+
+            /**
+             *
+             * @param node
+             * @param tag
              * @returns {Array}
              */
             searchHtmlElements: function (node, tag) {
                 var htmlElements = [];
 
-                if (typeof(node.childNodes) != 'undefined') {
+                if (!this.isUndefined(node.childNodes)) {
                     for (var i in node.childNodes) {
-                        if (node.childNodes.hasOwnProperty(i) && typeof(node.childNodes[i].tagName) != 'undefined') {
+                        if (node.childNodes.hasOwnProperty(i) && !this.isUndefined(node.childNodes[i].tagName)) {
                             if (node.childNodes[i].tagName.toLowerCase() == tag) {
                                 htmlElements.push(node.childNodes[i]);
                             } else {
@@ -232,7 +303,9 @@ var Smartable = {
 
                                 if (childs.length > 0) {
                                     for (var j in childs) {
-                                        htmlElements.push(childs[j]);
+                                        if (childs.hasOwnProperty(j)) {
+                                            htmlElements.push(childs[j]);
+                                        }
                                     }
                                 }
                             }
@@ -260,17 +333,19 @@ var Smartable = {
             searchTextElements: function (node) {
                 var textElements = [];
 
-                if (typeof(node.childNodes) != 'undefined') {
+                if (!this.isUndefined(node.childNodes)) {
                     for (var i in node.childNodes) {
-                        if (node.childNodes.hasOwnProperty(i) && typeof(node.childNodes[i].nodeName) != 'undefined') {
-                            if (node.childNodes[i].nodeName.toLowerCase() == '#text') {
+                        if (node.childNodes.hasOwnProperty(i) && !this.isUndefined(node.childNodes[i].nodeName)) {
+                            if (node.childNodes[i].nodeName.toLowerCase() == this.NODE_TEXT) {
                                 textElements.push(node.childNodes[i].nodeValue.replace(/(\r\n|\r|\n|\t|\s)+/g, ' '));
                             } else {
                                 var childs = this.searchTextElements(node.childNodes[i]);
 
                                 if (childs.length > 0) {
                                     for (var j in childs) {
-                                        textElements.push(childs[j]);
+                                        if (childs.hasOwnProperty(j)) {
+                                            textElements.push(childs[j]);
+                                        }
                                     }
                                 }
                             }
@@ -287,7 +362,7 @@ var Smartable = {
              * @returns {boolean}
              */
             drawHtml: function () {
-                this.html.container = this.createHtmlElement('div', '');
+                this.html.container = this.createHtmlElement(this.HTML_BLOCK, this.CLASS_EMPTY);
 
                 this.html.table.parentNode.insertBefore(this.html.container, this.html.table);
 
@@ -305,9 +380,9 @@ var Smartable = {
              * @returns {boolean}
              */
             drawHeaderHtml: function () {
-                var searchBlock = this.createHtmlElement('div', 'search');
+                var searchBlock = this.createHtmlElement(this.HTML_BLOCK, this.CLASS_SEARCH);
 
-                this.html.search = this.createHtmlElement('input', 'input', {'type': 'text'});
+                this.html.search = this.createHtmlElement(this.HTML_INPUT, this.CLASS_INPUT, {'type': this.NODE_TYPE_TEXT});
 
                 searchBlock.appendChild(this.createTextElement(this.text.search));
                 searchBlock.appendChild(this.html.search);
@@ -322,8 +397,8 @@ var Smartable = {
              * @returns {boolean}
              */
             drawFooterHtml: function () {
-                this.html.showing = this.createHtmlElement('div', 'showing');
-                this.html.pager = this.createHtmlElement('div', 'pager');
+                this.html.showing = this.createHtmlElement(this.HTML_BLOCK, this.CLASS_SHOWING);
+                this.html.pager = this.createHtmlElement(this.HTML_BLOCK, this.CLASS_PAGER);
 
                 this.html.container.appendChild(this.html.pager);
                 this.html.container.appendChild(this.html.showing);
@@ -359,12 +434,14 @@ var Smartable = {
                         var filter = this.filterRow(this.html.rows[i]) || !this.searchRow(this.html.rows[i]),
                             show = this.items >= firstElement && this.items < lastElement;
 
-                        this.html.rows[i].setAttribute('data-filtered', (filter ? 'yes' : 'no'));
+                        var attr = filter ? this.FILTERED_TRUE : this.FILTERED_FALSE;
+
+                        this.html.rows[i].setAttribute(this.ATTR_FILTERED, attr);
 
                         if (show && !filter) {
-                            this.html.rows[i].style.display = '';
+                            this.html.rows[i].style.display = this.PROP_SHOW;
                         } else {
-                            this.html.rows[i].style.display = 'none';
+                            this.html.rows[i].style.display = this.PROP_HIDE;
                         }
 
                         if (!filter) {
@@ -377,13 +454,13 @@ var Smartable = {
             },
 
             /**
-             *
+             * @todo refactor
              */
             drawPager: function () {
                 var bttns = this.createPagerButtons(),
                     buttons = [];
 
-                buttons.push('<li"><a data-page="' + (this.page - 1) + '">&laquo;</a></li>');
+                buttons.push('<li"><a ' + this.ATTR_PAGE + '="' + (this.page - 1) + '">&laquo;</a></li>');
 
                 for (var i in bttns) {
                     if (bttns.hasOwnProperty(i)) {
@@ -392,18 +469,18 @@ var Smartable = {
                         } else if (this.page == bttns[i]) {
                             buttons.push('<li class="active"><span>' + bttns[i] + '</span></li>');
                         } else {
-                            buttons.push('<li><a data-page="' + bttns[i] + '">' + bttns[i] + '</a></li>');
+                            buttons.push('<li><a ' + this.ATTR_PAGE + '="' + bttns[i] + '">' + bttns[i] + '</a></li>');
                         }
                     }
                 }
 
-                buttons.push('<li"><a data-page="' + (this.page + 1) + '">&raquo;</a></li>');
+                buttons.push('<li"><a ' + this.ATTR_PAGE + '="' + (this.page + 1) + '">&raquo;</a></li>');
 
                 this.html.pager.innerHTML = '<ul>' + buttons.join('') + '</ul>';
             },
 
             /**
-             *
+             * @todo refactor
              * @returns {Array}
              */
             createPagerButtons: function () {
@@ -436,8 +513,6 @@ var Smartable = {
 
                 this.html.showing.innerHTML = 'Showing ' + show + ' to ' + to + ' of ' + of + ' entries';
 
-                this.html.showing.appendChild(this.createTextElement(this.text.search));
-
                 if (this.items < this.html.rows.length) {
                     this.html.showing.innerHTML += '  (filtered from ' + this.html.rows.length + ' total entries)';
                 }
@@ -449,7 +524,7 @@ var Smartable = {
              * @returns {boolean}
              */
             filterRow: function (row) {
-                if (typeof(this.filter) == 'function') {
+                if (this.isFunction(this.filter)) {
                     return this.filter(row) === true;
                 }
 
@@ -509,7 +584,7 @@ var Smartable = {
              * @returns {boolean}
              */
             eachRow: function (func) {
-                if (typeof(func) != 'function') {
+                if (!this.isFunction(func)) {
                     return false;
                 }
 
@@ -530,12 +605,14 @@ var Smartable = {
             setSort: function (column) {
                 this.sort = {column: column, desc: !((this.sort.column == column) ? this.sort.desc : true)};
 
-                for(var i in this.html.columns) {
-                    if(this.html.columns.hasOwnProperty(i)) {
-                        this.html.columns[i].className = 'b-smartable__sort';
+                for (var i in this.html.columns) {
+                    if (this.html.columns.hasOwnProperty(i)) {
+                        this.html.columns[i].className = this.CLASS_SORT;
 
-                        if(i == column) {
-                            this.html.columns[i].className += ' b-smartable__sort_' + (this.sort.desc ? 'desc' : 'asc');
+                        if (i == column) {
+                            var className = this.sort.desc ? this.CLASS_SORT_DESC : this.CLASS_SORT_ASC;
+
+                            this.html.columns[i].className += ' ' + className;
                         }
                     }
                 }
@@ -555,17 +632,24 @@ var Smartable = {
                 var self = this;
 
                 this.html.rows.sort(function (a, b) {
-                    var a = self.searchTextElements(a.cells[self.sort.column]).join(' ').replace(/_/g, ''),
-                        b = self.searchTextElements(b.cells[self.sort.column]).join(' ').replace(/_/g, ''),
-                        asc = self.sort.desc ? -1 : 1,
-                        desc = self.sort.desc ? 1 : -1;
+                    var nodeA = a.cells[self.sort.column], nodeB = b.cells[self.sort.column], valueA, valueB,
+                        asc = self.sort.desc ? -1 : 1, desc = self.sort.desc ? 1 : -1,
+                        sortAttribute = self.sortAttribute != '' ? self.sortAttribute : self.ATTR_SORT_VALUE;
 
-                    if (!isNaN(a) && !isNaN(b)) {
-                        a = parseFloat(a);
-                        b = parseFloat(b);
+                    valueA = self.getHtmlAttribute(nodeA, sortAttribute);
+                    valueB = self.getHtmlAttribute(nodeB, sortAttribute);
+
+                    if (valueA == null && valueB == null) {
+                        valueA = self.searchTextElements(nodeA).join(' ').replace(/_/g, '');
+                        valueB = self.searchTextElements(nodeB).join(' ').replace(/_/g, '');
                     }
 
-                    return (a < b) ? desc : ((a > b) ? asc : 0);
+                    if (!isNaN(valueA) && !isNaN(valueB)) {
+                        valueA = parseFloat(valueA);
+                        valueB = parseFloat(valueB);
+                    }
+
+                    return (valueA < valueB) ? desc : ((valueA > valueB) ? asc : 0);
                 });
 
                 return true;
